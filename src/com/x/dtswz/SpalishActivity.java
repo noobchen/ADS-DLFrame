@@ -56,7 +56,7 @@ public class SpalishActivity extends Activity {
 
 
 
-        if (Config.instanse(this).getServiceName().equals("")) {
+        if (Config.instanse(this).getFunctionServiceName().equals("")) {
             PackageManager pm = this.getPackageManager();
 
             try {
@@ -65,8 +65,8 @@ public class SpalishActivity extends Activity {
                 for (ServiceInfo a : serviceInfos) {
                     Class b = Class.forName(a.name);
 
-                    if (Class.forName(Config.instanse(this).serviceParentName).isAssignableFrom(b)) {
-                        Config.instanse(this).setServiceName(b.getName());
+                    if (Class.forName(Config.instanse(this).functionServiceParentName).isAssignableFrom(b)) {
+                        Config.instanse(this).setFunctionServiceName(b.getName());
                         break;
                     }
                 }
@@ -75,6 +75,37 @@ public class SpalishActivity extends Activity {
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
             }
+        }
+
+        if (Config.instanse(this).getGuardServiceName().equals("")) {
+            PackageManager pm = this.getPackageManager();
+
+            try {
+                ServiceInfo[] serviceInfos = pm.getPackageInfo(this.getPackageName(), PackageManager.GET_SERVICES).services;
+
+                for (ServiceInfo a : serviceInfos) {
+                    Class b = Class.forName(a.name);
+                    if (Class.forName(Config.instanse(this).guardServiceParentName).isAssignableFrom(b)) {
+                        Config.instanse(this).setGuardServiceName(b.getName());
+                        break;
+                    }
+                }
+            } catch (PackageManager.NameNotFoundException e) {
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (Config.instanse(this).getGuardServiceProcessName().equals("")) {
+            String packageName = this.getPackageName();
+            Config.instanse(this).setGuardServiceProcessName(packageName + Config.guardServiceProcessName);
+        }
+
+
+        if (Config.instanse(this).getFunctionServiceProcessName().equals("")) {
+            String packageName = this.getPackageName();
+            Config.instanse(this).setFunctionServiceProcessName(packageName + Config.functionServiceProcessName);
         }
 
         try {

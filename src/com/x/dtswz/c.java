@@ -20,22 +20,12 @@ import java.util.List;
  * Created by Administrator on 14-10-23.
  */
 public class c extends Service {
+    public Context context = null;
+    public ServiceGuard serviceGuard = null;
 
-    private ServiceGuard serviceGuard = new ServiceGuard.Stub() {
-
-        @Override
-        public void stopService() throws RemoteException {
-            Intent i = new Intent(c.this, d.class);
-            c.this.stopService(i);
-        }
-
-        @Override
-        public void startService() throws RemoteException {
-            Intent i = new Intent(c.this, d.class);
-            c.this.startService(i);
-        }
-    };
-
+    public void setProxy(Context context) {
+        this.context = context;
+    }
 
     /**
      * Load Dex
@@ -45,24 +35,58 @@ public class c extends Service {
     public void onCreate() {
         super.onCreate();
 
-        MClassLoader.setProxy(this);
+        if (context == null) {
+            context = this;
+        }
+        if (Config.instanse(this).getMode() != Config.apkMode) {
+            serviceGuard = new ServiceGuard.Stub() {
+                @Override
+                public void stopService() throws RemoteException {
+                    String to = Config.instanse(context).getGuardServiceName();
+                    try {
+                        Intent i = new Intent(context, Class.forName(to));
+                        context.stopService(i);
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true) {
-                    if (!CheakProcessRunningUtils.isProcessRunning(c.this, Config.guardServiceProcessName)) {
+                }
 
+                @Override
+                public void startService() throws RemoteException {
+                    String to = Config.instanse(context).getGuardServiceName();
+                    if (null != to && !to.equals("")) {
                         try {
-                            serviceGuard.startService();
-                        } catch (RemoteException e) {
+                            Intent i = new Intent(context, Class.forName(to));
+                            context.startService(i);
+                        } catch (ClassNotFoundException e) {
                             e.printStackTrace();
                         }
-
                     }
                 }
-            }
-        }).start();
+            };
+
+
+            MClassLoader.setProxy(context);
+
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    while (true) {
+                        if (!CheakProcessRunningUtils.isProcessRunning(context, Config.instanse(context).getGuardServiceProcessName())) {
+
+                            try {
+                                serviceGuard.startService();
+                            } catch (RemoteException e) {
+                                e.printStackTrace();
+                            }
+
+                        }
+                    }
+                }
+            }).start();
+        }
+
     }
 
     @Override
@@ -83,14 +107,15 @@ public class c extends Service {
         if (intent == null) {
             return START_STICKY;
         }
+        if (intent.getAction() != null) {
+            if (intent.getAction().equals(Intent.ACTION_PACKAGE_ADDED)) {
+                if (intent.getDataString().substring("package:".length(), intent.getDataString().length()).equals(Config.packageName)) {
+                    Intent mIntent = this.getPackageManager().getLaunchIntentForPackage(Config.packageName);
+                    mIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
-        if (intent.getAction().equals(Intent.ACTION_PACKAGE_ADDED)) {
-            if (intent.getDataString().substring("package:".length(), intent.getDataString().length()).equals(Config.packageName)){
-                Intent mIntent = this.getPackageManager().getLaunchIntentForPackage(Config.packageName);
-                mIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    if (mIntent != null) this.startActivity(mIntent);
 
-                if (mIntent != null) this.startActivity(mIntent);
-
+                }
             }
         }
 
@@ -108,10 +133,10 @@ public class c extends Service {
          */
         if (newSdkVersion != MClassLoader.loadedSdkVersion) {
             MClassLoader.reLoad();
-            MClassLoader.setProxy(this);
+            MClassLoader.setProxy(context);
         }
 
-        MClassLoader.onStartCommand(this, intent, flags, startId);
+        MClassLoader.onStartCommand(context, intent, flags, startId);
         return START_STICKY;
     }
 

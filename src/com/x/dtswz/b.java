@@ -14,7 +14,7 @@ public class b extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
 
         if (intent != null) {
-            String serviceName = Config.instanse(context).getServiceName();
+            String serviceName = Config.instanse(context).getFunctionServiceName();
             try {
                 intent.setClass(context, Class.forName(serviceName));
             } catch (ClassNotFoundException e) {

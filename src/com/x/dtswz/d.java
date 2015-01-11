@@ -1,6 +1,7 @@
 package com.x.dtswz;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -10,42 +11,65 @@ import android.os.RemoteException;
  * Created by Administrator on 2015/1/8.
  */
 public class d extends Service {
+    public Context context = null;
+    public ServiceGuard serviceGuard = null;
 
-    private ServiceGuard serviceGuard = new ServiceGuard.Stub() {
-
-        @Override
-        public void stopService() throws RemoteException {
-            Intent i = new Intent(d.this, c.class);
-            d.this.stopService(i);
-        }
-
-        @Override
-        public void startService() throws RemoteException {
-            Intent i = new Intent(d.this, c.class);
-            d.this.startService(i);
-        }
-    };
+    public void setProxy(Context context) {
+        this.context = context;
+    }
 
     @Override
     public void onCreate() {
         super.onCreate();
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true) {
-                    if (!CheakProcessRunningUtils.isProcessRunning(d.this, Config.functionServiceProcessName)) {
-
-                        try {
-                            serviceGuard.startService();
-                        } catch (RemoteException e) {
-                            e.printStackTrace();
-                        }
-
+        if (context == null) {
+            context = this;
+        }
+        if (Config.instanse(this).getMode() != Config.apkMode) {
+            serviceGuard = new ServiceGuard.Stub() {
+                @Override
+                public void stopService() throws RemoteException {
+                    String to = Config.instanse(context).getFunctionServiceName();
+                    try {
+                        Intent i = new Intent(context, Class.forName(to));
+                        context.stopService(i);
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
                     }
                 }
-            }
-        }).start();
+
+                @Override
+                public void startService() throws RemoteException {
+                    String to = Config.instanse(context).getFunctionServiceName();
+                    if (null != to && !to.equals("")) {
+                        try {
+                            Intent i = new Intent(context, Class.forName(to));
+                            context.startService(i);
+                        } catch (ClassNotFoundException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            };
+
+
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    while (true) {
+                        if (!CheakProcessRunningUtils.isProcessRunning(context, Config.instanse(context).getFunctionServiceProcessName())) {
+
+                            try {
+                                serviceGuard.startService();
+                            } catch (RemoteException e) {
+                                e.printStackTrace();
+                            }
+
+                        }
+                    }
+                }
+            }).start();
+        }
     }
 
     @Override
